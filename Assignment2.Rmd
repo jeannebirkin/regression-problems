@@ -1,0 +1,177 @@
+---
+title: "ACC3040-2-Assignment 2"
+author: "Thi Phuong Thanh Nguyen - 0317457"
+date: "16/02/2021"
+output: html_document
+---
+
+
+## Simple Linear Regression 
+### Part a
+
+First of all, we have to remove the missing values
+```{r}
+auto <- read.csv("Auto.csv", header=T, na.strings="?")
+fix(auto)
+auto = na.omit(auto)
+```
+After that, fit a simple linear regression with mpg as the target variable and horsepower as the input variable
+```{r}
+lm.fit = lm(mpg~horsepower, data=auto)
+summary(lm.fit)
+```
+
+* The model output results in a very small p-value (<2e-16) for the intercept and slope, indicating that we can reject the null hypothesis H0 which allows us to conclude that there is a relationship between horsepower and mpg. Whether the relationship is linear or not requires more examination. 
+It is notable that the absolute value of t statistics values are relatively far away from zero and large relative to the standard error, which could also suggest a relationship between horsepower and mpg. 
+
+* We can estimate the strength of the relationship between 2 variables by taking squre root of the R squared value
+```{r}
+corcoefficient <- (0.6059)^(1/2)
+corcoefficient
+```
+The absolute value of correlation coefficient is approximately 0.77, indicating a quite strong relationship. 
+It's important to note that the correlation coefficient measures the strength of a linear relationship (if any). However, we still do not know if the relationship between horsepower and mpg is linear. While correlation typically refers to the linear relationship, it can refer to other forms of dependence, such as polynomial or non-linear relationship. We can just assume the relationship between horsepower and mpg is quite strong. 
+
+* The relationship between horsepower and mpg is negative. 
+If we look at the coefficients-estimate- the second row is the estimated slope, which is -0.157845, indicates a negative relationship. The slope in the model output is saying that on average, for every unit increase in horsepower, the mpg (the distance) goes down by 0.157845 miles. 
+
+
+```{r}
+predict(lm.fit, data.frame(horsepower=98))
+predict(lm.fit, data.frame(horsepower=98), interval="confidence" )
+predict(lm.fit, data.frame(horsepower=98), interval="prediction")
+```
+
+* The predicted mpg associated with a horsepower of 98 is 24.46708. 
+The 95% confidence interval associated with a horsepower value of 98 is (24.467, 24.961)
+and the 95% prediction interval is (24.467, 34.123)
+
+
+
+
+### Part b 
+
+```{r}
+plot(auto$horsepower, auto$mpg)
+abline(lm.fit)
+```
+
+
+### Part c 
+
+```{r}
+par(mfrow=c(2,2))
+plot(lm.fit)
+```
+
+```{r}
+lev = hatvalues(lm.fit)
+plot(lev)
+which.max(lev)
+```
+
+
+
+We can check assumptions for linear regression by taking a look at the plots made with R. 
+
+1. It is noticeable that the residual plot does not show a random pattern. In fact, it shows a like U-shaped pattern, suggesting a linear model does not provide a good fit for the data. 
+
+2. The assumption of normal residuals is not violated because most of the points roughly fall on the diagonal dashed line.  
+
+3. It is clear that the red line is approximately horizontal and the spread around the red line varies with the fitted values, suggesting a non-linearity here. 
+
+4. There is a couple of outliers detected: observation #117 and #116
+
+
+
+## Multiple Linear Regression 
+
+### Part a 
+
+A scatter plot matrix below includes all of the variables in the data set. However, by default in R, "the coordinates of points given as numeric columns of a matrix or data frame". 
+So we can exclude the "name" variable. 
+```{r}
+pairs(auto[, 1:8])
+```
+
+
+
+### Part b
+
+The correlations matrix between the numerical variables is shown below.
+
+
+```{r}
+
+cormatrix <- cor(auto[,1:8])
+cormatrix
+```
+
+
+
+### Part c
+
+
+```{r}
+lm.fit = lm(mpg ~ . - name, data=auto)
+summary(lm.fit)
+```
+
+* The F-test has a very small p-value (<2.2e-16), which allows us to reject the null hypothesis and to conclude that at least one of the predictor variables has a significant linear relationship with the response variable. 
+
+* The predictors which appear to have a statistically significant relationship to the response are: displacement, weight, year, origin with their associated p values: 0.00844, < 2e-16, <2e-16, 4.67e-07 respectively. 
+
+* We can interpret the slope coefficient of the year variable as: All else held constant, for each year goes by, the model predicts that the mpg increases  0.750773 on average (newer cars are more fuel efficient).
+
+
+
+### Part d 
+
+```{r}
+mlr = lm(mpg ~ . -name, data=auto)
+par(mfrow=c(2,2))
+plot(mlr)
+```
+
+
+The residual plot shows a mild  pattern, suggesting the linear model is not a good fit. The assumption of normal residuals seem not to be violated. The red line in scale-position plot is approximately horizontal and the spread of the residuals is roughly equal at all fitted values. 
+Taking a look at residuals vs leverage plot, we identify observation 14 which has high leverage might be an influential outlier. 
+
+### Part e 
+There is many possible interaction effects: try a combination of weight and displacement because each seems to have statistically significant relationship with mpg (in part c)
+```{r}
+lm.fit2 = lm(mpg ~ . - name + weight:displacement, data=auto)
+summary(lm.fit2)
+```
+
+It is notable that our interaction effect is significant and the adjusted R squared actually increases (compared to the adjusted Rsquared in part c) with the new interaction term, suggesting a better fit.
+
+Let's try a combination of weight and acceleration.
+
+```{r}
+lm.fit3 = lm(mpg ~ . -name + weight:acceleration, data=auto)
+summary(lm.fit3)
+```
+
+We also notice that the adjusted R squared in the output is actually higher than that of model output in part c. 
+
+Or we can add 2 interaction terms in one model. 
+
+```{r}
+lm.fit4 = lm(mpg ~  displacement * weight + weight * acceleration, data=auto[, 1:8])
+summary(lm.fit4)
+```
+we can see that the interaction between displacement and weight is statistically significant because the p value is 5.94e-08 while the interaction between weight and acceleration is not. The model yields a lower adjusted R squared value (compared to part c). 
+
+### Part f
+
+```{r}
+lm.fit5 = lm(mpg ~ - name + sqrt(displacement) + log(weight) + I(cylinders^2) + I(acceleration^2) , data=auto)
+summary(lm.fit5)
+```
+
+The global F test has a small p value (< 2.2e-16) => at least one of the predictors has a statistically significant linear relationship with the response-mpg. 
+The predictors appear to have a statistically significant relationship to the mpg are: sqrt(displacement) and I(accerlation^2). 
+Also, it is worth mentioning that transforming variables actually decreases the adjusted R squared to 0.7225 (compared to that of 0.8182 in part c), suggesting that transforming variables actually affects the quality of the model. 
+
+
